@@ -1,0 +1,9 @@
+FROM ubuntu:focal
+
+RUN apt update && apt upgrade -y
+ENV TZ=Europe/Bucharest
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timeze
+RUN echo 'Start PostgreSQL image build! '
+RUN apt-get install postgresql -y
+
+cmd ["posgresql" ," -g", "daemon-reload"]

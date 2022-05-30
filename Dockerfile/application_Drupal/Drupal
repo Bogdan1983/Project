@@ -1,0 +1,11 @@
+FROM ubuntu:focal
+RUN  apt-get update \
+  && apt-get install -y wget \
+  && rm -rf /var/lib/apt/lists/*
+RUN echo 'Start Drupal image build '
+RUN wget  https://www.drupal.org/download-latest/tar.gz --directory-prefix=/tmp
+RUN mkdir /var/www/
+Run mkdir /var/www/html
+RUN tar xf /tmp/tar.gz --directory=/var/www/html
+RUN chown -R root:root /var/www/html/drupal-9.3.14
+CMD ["drupal", "-g", "daemon off;"]
