@@ -1,55 +1,123 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-$os_update = <<SCRIPT
+# ssh-keygen -t rsa -b 4096 -C "ansible"
+
+$os_packages_update = <<SCRIPT
 #!/bin/bash
-echo "Updating all the packages from the system"
-apt update && apt upgrade -y
+  echo "Update OS packages..."
+  apt update && apt upgrade -y 
 SCRIPT
 
-$jenkins_install = <<SCRIPT
+$docker_install = <<SCRIPT
 #!/bin/bash
-curl -fsSL https://pkg.jenkins.io/debian/jenkins.io.key | sudo tee \
-  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
-sudo apt-get update
-sudo apt-get install jenkins -y
-sudo systemctl start jenkins
+    echo "Docker install..."
+    apt install docker.io -y
 SCRIPT
 
-$java_install = <<SCRIPT
+$user_setup = <<SCRIPT
 #!/bin/bash
-echo "Downloading java on the system"
-sudo apt update
-sudo apt install openjdk-11-jre-headless -y
+
+function create_user {
+  USER_EXISTS=0
+  USERS=`getent passwd | cut -d":" -f1`
+  
+  for USER in $USERS;
+  do
+    if [[ $1 == $USER ]]; then
+      echo "$1 user exists"
+      USER_EXISTS=1
+    fi
+  done
+
+  if [[ $USER_EXISTS -eq 0 ]]; then
+    echo "Creating user: $1"
+    adduser --disabled-password --gecos "" $1
+  fi
+}
+
+create_user "jenkins"
+
 SCRIPT
 
-$nginx_install = <<SCRIPT
+$jenkins_setup_war_package = <<SCRIPT
 #!/bin/bash
-sudo apt install nginx -y
+  echo " Installing Jenkins war package..."
+  echo " Installing Jenkins dependencies..."
+  apt install openjdk-11-jre -y
+  
+  # Check if Jenkins dir exists
+  if [ ! -d /opt/jenkins ]; then
+    mkdir /opt/jenkins
+  fi
+
+  # Check if file jenkins.war exists
+  if [ ! -f /opt/jenkins/jenkins.war ]; then
+    wget  --directory-prefix=/opt/jenkins https://get.jenkins.io/war/2.349/jenkins.war
+  fi
+  
+  if [ ! -d /opt/jenkins/plugins ]; then
+    mkdir /opt/jenkins/plugins
+  fi
+
+  if [ ! -f /vagrant/files/plugins.txt ]; then
+    echo "Make sure vagrant folder is mounted and/or the plugins.txt file exists."
+    exit
+  fi
+  
+  FILE=/vagrant/files/plugins.txt
+  PLUGINS=$(<$FILE)
+  for PLUGIN in $PLUGINS
+    do
+      echo Downloading $PLUGIN
+      HPI=`echo $PLUGIN | cut -d"." -f1`.hpi
+      JPI=`echo $PLUGIN | cut -d"." -f1`.jpi
+      PLUGIN_URL=https://updates.jenkins-ci.org/download/plugins/$HPI
+      curl -L $PLUGIN_URL --output /opt/jenkins/plugins/$JPI
+      #wget --directory-prefix=/opt/jenkins/plugins/$JPI $PLUGIN_URL
+    done
+
+  chown -R jenkins:jenkins /opt/jenkins
+  usermod -aG docker jenkins
+  # export JENKINS_HOME=/opt/jenkins
+  #java -jar /opt/jenkins/jenkins.war --httpPort=8080
+
+  if [ ! -f /lib/systemd/system/jenkins.service ]; then
+    if [ ! -f /vagrant/files/jenkins.service ]; then
+      echo "Make sure vagrant folder is mounted and/or the jenkins.service file exists."
+      exit      
+    fi
+    cp /vagrant/files/jenkins.service /lib/systemd/system
+    systemctl daemon-reload
+    systemctl enable jenkins.service
+    systemctl start jenkins.service
+  fi
 SCRIPT
-
-
 
 Vagrant.configure("2") do |config|
- 
-  config.vm.define "Operator" do |operator|
-      operator.vm.box = "ubuntu/focal64"
-      operator.vm.hostname = "Operator"
-      operator.vm.network "private_network", ip: "192.168.56.30"
-      operator.vm.provision "shell", :inline =>$os_update 
-      operator.vm.provision "shell", :inline =>$java_install
-      operator.vm.provision "shell", :inline =>$jenkins_install  
-      
+  config.vm.box = "ubuntu/focal64"
+
+  config.vm.define "cicd_server" do |jk|
+    jk.vm.hostname = "jenkins"
+    jk.vm.network "private_network", ip: "192.168.56.30"
+    jk.vm.provider "virtualbox" do |vb|
+      vb.cpus = 2
+      vb.memory = 4096
+    end
+    jk.vm.provision "shell", :inline => $os_packages_update
+    jk.vm.provision "shell", :inline => $docker_install
+    jk.vm.provision "shell", :inline => $user_setup
+    jk.vm.provision "shell", :inline => $jenkins_setup_war_package
   end
-  config.vm.define "Environment" do |environment|
-    environment.vm.box = "ubuntu/focal64"
-    environment.vm.hostname = "Environment"
-    environment.vm.network "private_network", ip: "192.168.56.31"
-    environment.vm.provision "shell", :inline =>$os_update 
-    environment.vm.provision "shell", :inline =>$nginx_install 
-    
-   end
+
+  config.vm.define "env_server" do |dk|
+    dk.vm.hostname = "docker"
+    dk.vm.network "private_network", ip: "192.168.56.31"
+    dk.vm.provider "virtualbox" do |vb|
+      vb.cpus = 2
+      vb.memory = 4096
+    end
+    dk.vm.provision "shell", :inline => $os_packages_update
+    dk.vm.provision "shell", :inline => $docker_install
+  end
 end
