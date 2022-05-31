@@ -1,0 +1,38 @@
+
+pipeline {
+    environment {
+        registry = "bogdanva/jenkins_Nginx"
+        registryCredential = 'dockerhub-cred'
+        dockerImage = ''
+        dockerFile = 'Dockerfile'
+    }
+    agent any
+    stages {
+        stage('Cloning Git') {
+            steps {
+                git 'https://github.com/Bogdan1983/Project.git'
+            }
+        }        
+        stage('Building Docker image') {
+            steps{
+                script {
+                    dockerImage = docker.build(registry,"-f ./dockerfiles/${dockerFile} .")
+                }
+            }
+        }
+        stage('Push Docker image on DockerHub') {
+            steps{
+                script {
+                    docker.withRegistry( '', registryCredential ) {
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+        stage('Cleaning up') {
+            steps{
+                sh "docker rmi $registry"
+            }
+        }
+    }
+}
