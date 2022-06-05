@@ -1,4 +1,5 @@
 FROM ubuntu:focal
+ENV DEBIAN_FRONTEND=noninteractive
 RUN echo 'Start Nginx image build!'
 RUN apt update && apt upgrade -y
 RUN apt install nginx -y
