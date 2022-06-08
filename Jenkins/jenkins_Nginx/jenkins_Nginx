@@ -1,8 +1,7 @@
-
 pipeline {
     environment {
-        registry = "Bogdan1983/jenkins_Nginx"
-        registryCredential = 'dockerhub-cred'
+        registry = "bogdanva/mynginx"
+        registryCredential = 'docker_id'
         dockerImage = ''
         dockerFile = 'Dockerfile'
     }
@@ -16,7 +15,7 @@ pipeline {
         stage('Building Docker image') {
             steps{
                 script {
-                    dockerImage = docker.build(registry,"-f ./dockerfiles/${dockerFile} .")
+                    dockerImage = docker.build(registry,"-f ./Dockerfile/loadbalancer_Nginx/${dockerFile} .")
                 }
             }
         }
