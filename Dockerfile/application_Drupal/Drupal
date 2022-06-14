@@ -7,5 +7,5 @@ RUN wget  https://www.drupal.org/download-latest/tar.gz --directory-prefix=/tmp
 RUN mkdir /var/www/
 Run mkdir /var/www/html
 RUN tar xf /tmp/tar.gz --directory=/var/www/html
-RUN chown -R root:root /var/www/html/drupal-9.3.14
+RUN chown -R root:root /var/www/html/drupal-9.3.16
 CMD ["drupal", "-g", "daemon off;"]
