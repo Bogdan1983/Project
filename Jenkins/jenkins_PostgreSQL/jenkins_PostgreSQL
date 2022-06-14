@@ -1,0 +1,37 @@
+pipeline {
+    environment {
+        registry = "bogdanva/mypostgresql"
+        registryCredential = 'docker_id'
+        dockerImage = ''
+        dockerFile = 'PostgreSQL'
+    }
+    agent any
+    stages {
+        stage('Cloning Git') {
+            steps {
+                git 'https://github.com/Bogdan1983/Project.git'
+            }
+        }        
+        stage('Building Docker image') {
+            steps{
+                script {
+                    dockerImage = docker.build(registry,"-f ./Dockerfile/database_PostgreSQL/${dockerFile} .")
+                }
+            }
+        }
+        stage('Push Docker image on DockerHub') {
+            steps{
+                script {
+                    docker.withRegistry( '', registryCredential ) {
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+        stage('Cleaning up') {
+            steps{
+                sh "docker rmi $registry"
+            }
+        }
+    }
+}
