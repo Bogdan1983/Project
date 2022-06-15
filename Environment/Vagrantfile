@@ -62,7 +62,7 @@ $jenkins_setup_war_package = <<SCRIPT
   fi
   # Check if file jenkins.war exists
   if [ ! -f /opt/jenkins/jenkins.war ]; then
-    wget  --directory-prefix=/opt/jenkins https://get.jenkins.io/war/2.349/jenkins.war 
+    wget  --directory-prefix=/opt/jenkins https://get.jenkins.io/war/2.355/jenkins.war 
   fi
   
   if [ ! -d /opt/jenkins/plugins ]; then
