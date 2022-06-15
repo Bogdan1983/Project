@@ -136,9 +136,10 @@ Vagrant.configure("2") do |config|
       end
     jk.vm.provision "shell", :inline => $os_packages_update
     jk.vm.provision "shell", :inline => $docker_install
+    jk.vm.provision "shell", :inline => $user_setup
     jk.vm.provision "shell", :inline => $jenkins_setup_war_package
    # jk.vm.provision "shell", :inline => $jenkins_install_plugins
-    jk.vm.provision "shell", :inline => $user_setup
+    
   end
 
   config.vm.define "env_server" do |dk|
